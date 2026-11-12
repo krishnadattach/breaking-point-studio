@@ -1,0 +1,22 @@
+# Secrets - NEVER commit
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+frontend/dist/
+
+# Generated episode files (audio, renders, videos) - big and re-creatable
+output/
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+
+# Local MySQL 8 data folder
+mysql-data/
