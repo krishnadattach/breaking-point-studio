@@ -7,7 +7,7 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
 | 1 - Setup | DONE |
 | 2 - LangGraph workflow | DONE (mock-tested) |
 | 3 - MySQL tables | DONE (mock-tested) |
-| 4 - FastAPI | next |
+| 4 - FastAPI | DONE (mock-tested) |
 | 5 - React dashboard | not started |
 | 6 - Finish (start.bat, README, GitHub) | not started |
 
@@ -48,6 +48,17 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
 - Read helpers for Stage 4: db.list_episodes(), db.get_episode(id).
 - Tested in mock mode: full run with one notes loop -> 2 script versions, 10 claims, 3 approvals, 23 assets.
 
+## Stage 4 - FastAPI (DONE)
+- backend/bp/runner.py: runs the graph in a background thread per episode (starts, or resumes after a review). A
+  set of running ids stops double-resumes. On server start, episodes left 'running' are marked failed (-> Retry).
+- backend/bp/api.py: POST /episodes, GET /episodes, GET /episodes/{id}, POST /episodes/{id}/approve,
+  POST /episodes/{id}/reject {notes}, POST /episodes/{id}/retry, GET /episodes/{id}/video. CORS allows the Vite
+  dashboard on port 5173. Clickable test page at /docs.
+- Start: `cd backend; ..\.venv\Scripts\python -m uvicorn bp.api:app --port 8000`
+  (add MOCK_LLM=1 MOCK_SEARCH=1 to the environment for free test runs).
+- Tested in mock mode over HTTP: start -> script review -> notes -> script review -> approve -> render ->
+  video review -> download (18 MB mp4) -> approve -> done. Also: empty notes (422), double approve (409), unknown id (404).
+
 ## Next
-Stage 4 - FastAPI: start episode, list, view one, approve / send notes (resumes the graph), graph runs in the
-background and the dashboard polls status. Plan: reuse the graph; one background thread per running episode.
+Stage 5 - React dashboard (Vite): new-episode form, episode list with stage (poll every few seconds), script review
+page with claim source links + Approve / Send Notes, video page with player, download and final approval.
