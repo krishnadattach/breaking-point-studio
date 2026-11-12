@@ -7,7 +7,7 @@ Two checks per claim:
 Failed claims are sent back to write_script - at most MAX_FACT_LOOPS times.
 After that the script goes to the human reviewer with the failures marked.
 """
-from .. import config, llm
+from .. import config, db, llm
 from ..state import ClaimChecks, State
 
 
@@ -46,6 +46,8 @@ def fact_check(state: State) -> dict:
 
     failed = [c for c in claims if c["status"] == "fail"]
     problems += [f"Level {c['level']}: {c['reason']} (claim: {c['claim']})" for c in failed]
+
+    db.save_script_with_claims(state["episode_id"], script, claims)   # one script version per pass
 
     loops = state.get("fact_loops", 0)
     if problems and loops < config.MAX_FACT_LOOPS:

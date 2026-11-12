@@ -4,14 +4,16 @@ Why: the script must be based on real sources, so fact_check can later link
 every claim to a URL. Uses Tavily (needs TAVILY_API_KEY, free tier exists).
 No key -> fake MOCK sources so the pipeline still runs.
 """
-from .. import config, mock
+from .. import config, db, mock
 from ..state import State
 
 
 def research(state: State) -> dict:
     topic = state["topic"]
     if config.mock_search():
-        return {"stage": "research", "sources": mock.search(topic)}
+        sources = mock.search(topic)
+        db.save_sources(state["episode_id"], sources)
+        return {"stage": "research", "sources": sources}
 
     from langchain_tavily import TavilySearch
 
@@ -29,4 +31,5 @@ def research(state: State) -> dict:
             if r["url"] not in seen:
                 seen.add(r["url"])
                 sources.append({"url": r["url"], "title": r.get("title", ""), "snippet": r.get("content", "")[:1200]})
+    db.save_sources(state["episode_id"], sources)
     return {"stage": "research", "sources": sources}

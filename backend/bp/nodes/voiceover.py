@@ -7,7 +7,7 @@ import json
 import subprocess
 import wave
 
-from .. import config
+from .. import config, db
 from ..state import State
 
 
@@ -36,4 +36,6 @@ def voiceover(state: State) -> dict:
     for it in items:
         with wave.open(it["path"]) as w:
             it["seconds"] = round(w.getnframes() / w.getframerate(), 2)
+    for it in items:
+        db.save_asset(state["episode_id"], "audio", it["label"], it["path"], it["seconds"])
     return {"stage": "voiceover", "audio": items}

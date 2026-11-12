@@ -11,6 +11,7 @@ import uuid
 
 from langgraph.types import Command
 
+from . import db
 from .graph import build_graph, mysql_checkpointer
 
 
@@ -36,14 +37,20 @@ def main():
         ep = args.resume or f"ep-{uuid.uuid4().hex[:8]}"
         cfg = {"configurable": {"thread_id": ep}}
         payload = None if args.resume else {"episode_id": ep, "topic": args.topic, "fact_loops": 0}
+        if not args.resume:
+            db.create_episode(ep, args.topic)
         print(f"Episode {ep}")
         notes_pending = args.notes_once
         while True:
             t0 = time.time()
-            for update in graph.stream(payload, cfg, stream_mode="updates"):
-                for node in update:
-                    if node != "__interrupt__":
-                        print(f"  [{time.time() - t0:6.1f}s] finished node: {node}")
+            try:
+                for update in graph.stream(payload, cfg, stream_mode="updates"):
+                    for node in update:
+                        if node != "__interrupt__":
+                            print(f"  [{time.time() - t0:6.1f}s] finished node: {node}")
+            except Exception as e:                      # show the failure in the episodes table, then re-raise
+                db.set_stage(ep, graph.get_state(cfg).values.get("stage", "unknown"), "failed", str(e)[:2000])
+                raise
             wait = pending_interrupt(graph, cfg)
             if wait is None:
                 print("Graph finished.")

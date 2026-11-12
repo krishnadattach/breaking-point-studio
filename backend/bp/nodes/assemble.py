@@ -6,7 +6,7 @@ using an .ass subtitle file that we generate.
 """
 import subprocess
 
-from .. import config
+from .. import config, db
 from ..state import State
 from .render import VERDICT_AT
 
@@ -84,4 +84,6 @@ def assemble(state: State) -> dict:
     (ep / "captions.ass").write_text(build_ass(state["script"], state["audio"], state["shots"]), encoding="utf-8")
     _ffmpeg(["-i", "joined.mp4", "-vf", "ass=captions.ass", "-c:v", "libx264", "-preset", "veryfast",
              "-crf", "20", "-c:a", "copy", "-movflags", "+faststart", "final.mp4"], cwd=ep)
-    return {"stage": "assemble", "final_video": str(ep / "final.mp4")}
+    final = str(ep / "final.mp4")
+    db.save_asset(state["episode_id"], "final_video", "final", final)
+    return {"stage": "assemble", "final_video": final}

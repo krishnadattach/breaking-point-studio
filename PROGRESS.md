@@ -6,8 +6,8 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
 |---|---|
 | 1 - Setup | DONE |
 | 2 - LangGraph workflow | DONE (mock-tested) |
-| 3 - MySQL tables | next |
-| 4 - FastAPI | not started |
+| 3 - MySQL tables | DONE (mock-tested) |
+| 4 - FastAPI | next |
 | 5 - React dashboard | not started |
 | 6 - Finish (start.bat, README, GitHub) | not started |
 
@@ -35,9 +35,19 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
   forced. Real runs cost money: ask the owner before the first real run (planned for Stage 6).
 - NOT yet tested with real Claude or Tavily (fact_check's source-text check in particular).
 - Skeleton limits: object is a plain sphere; the verdict flash is at 60% of each shot, not synced to the spoken word.
-- Nothing is committed to git yet (files are staged). Commit and GitHub push happen in Stage 6.
+- Stages 1-2 committed; from now on commit after each finished stage. GitHub push happens in Stage 6.
 - The old MySQL 5.1 on port 3306 is untouched and unused.
 
+## Stage 3 - MySQL tables (DONE)
+- backend/bp/db.py: 6 readable tables beside LangGraph's own checkpoint tables, created automatically on start:
+  episodes (topic, stage, status, error), sources, scripts (new version per draft), claims (per level, pass/fail),
+  approvals (every approve/notes decision), assets (audio, render, final_video paths; re-runs replace rows).
+- Nodes write to them: research->sources, fact_check->scripts+claims, review nodes->approvals + status
+  (waiting_script_review / waiting_video_review / done), voiceover/render/assemble->assets. A wrapper in graph.py
+  updates `episodes.stage` as each node starts. cli.py creates the episode row and marks `failed` on errors.
+- Read helpers for Stage 4: db.list_episodes(), db.get_episode(id).
+- Tested in mock mode: full run with one notes loop -> 2 script versions, 10 claims, 3 approvals, 23 assets.
+
 ## Next
-Stage 3 - MySQL tables: episodes, scripts, claims, sources, approvals, assets
-(audio, render and final video paths). Then wire the graph nodes to write into them.
+Stage 4 - FastAPI: start episode, list, view one, approve / send notes (resumes the graph), graph runs in the
+background and the dashboard polls status. Plan: reuse the graph; one background thread per running episode.

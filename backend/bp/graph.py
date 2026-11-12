@@ -12,11 +12,12 @@
                                              END
 """
 from contextlib import contextmanager
+from functools import wraps
 
 from langgraph.checkpoint.mysql.pymysql import PyMySQLSaver
 from langgraph.graph import END, START, StateGraph
 
-from . import config
+from . import config, db
 from .nodes.assemble import assemble
 from .nodes.fact_check import fact_check, route_after_fact_check
 from .nodes.render import render
@@ -28,12 +29,21 @@ from .nodes.write_script import write_script
 from .state import State
 
 
+def tracked(name, fn):
+    """Wrap a node so the episodes table always shows which stage is running (the dashboard reads it)."""
+    @wraps(fn)
+    def run(state):
+        db.set_stage(state["episode_id"], name)
+        return fn(state)
+    return run
+
+
 def build_graph(checkpointer):
     g = StateGraph(State)
     for name, fn in [("research", research), ("write_script", write_script), ("fact_check", fact_check),
                      ("review_script", review_script), ("voiceover", voiceover), ("render", render),
                      ("assemble", assemble), ("review_video", review_video)]:
-        g.add_node(name, fn)
+        g.add_node(name, tracked(name, fn))
 
     g.add_edge(START, "research")
     g.add_edge("research", "write_script")
@@ -52,4 +62,5 @@ def mysql_checkpointer():
     """Durable memory for the graph: every step is saved in MySQL (tables created on first use)."""
     with PyMySQLSaver.from_conn_string(config.mysql_conn_string()) as saver:
         saver.setup()
+        db.init_db()
         yield saver

@@ -7,7 +7,7 @@ skipped, so if the computer crashes halfway, resuming does not redo them.
 import json
 import subprocess
 
-from .. import config
+from .. import config, db
 from ..state import State
 
 TAIL = 0.7            # seconds of calm after the voice stops
@@ -45,4 +45,6 @@ def render(state: State) -> dict:
         (out / f"{a['label']}.log").write_text(r.stdout + "\n" + r.stderr, encoding="utf-8")
         if r.returncode != 0 or not mp4.exists():
             raise RuntimeError(f"Blender failed on {a['label']} - see {out / (a['label'] + '.log')}")
+    for s in shots:
+        db.save_asset(state["episode_id"], "render", s["label"], s["path"], s["seconds"])
     return {"stage": "render", "shots": shots}
