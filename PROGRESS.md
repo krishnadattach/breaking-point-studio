@@ -8,7 +8,7 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
 | 2 - LangGraph workflow | DONE (mock-tested) |
 | 3 - MySQL tables | DONE (mock-tested) |
 | 4 - FastAPI | DONE (mock-tested) |
-| 5 - React dashboard | not started |
+| 5 - React dashboard | DONE (builds; owner to click through) |
 | 6 - Finish (start.bat, README, GitHub) | not started |
 
 ## Stage 1 - Setup (DONE)
@@ -59,6 +59,20 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
 - Tested in mock mode over HTTP: start -> script review -> notes -> script review -> approve -> render ->
   video review -> download (18 MB mp4) -> approve -> done. Also: empty notes (422), double approve (409), unknown id (404).
 
+## Stage 5 - React dashboard (DONE)
+- frontend/ = Vite + React (plain JS, no router/UI library). Dark theme, cyan #00C2FF + orange #FF6B2C accents
+  (cyan = normal/go, orange = needs your attention / twist level).
+- src/api.js (all backend calls), src/usePolling.js (asks the backend again every 3 s while working, 6 s while waiting),
+  src/stages.js (8 stage names), src/components.jsx (badge, 8-dot stage track), src/styles.css.
+- pages/EpisodeList.jsx: new-episode form + episode list (stage, status, rows needing you are marked orange).
+- pages/EpisodePage.jsx: one episode; stage track, progress, error box + Retry, Script / Video tabs.
+- pages/ScriptReview.jsx: hook, 10 levels (value, verdict, twist highlighted), each claim with Checked/Failed
+  and its source link, Approve / Send notes (notes required), earlier decisions.
+- pages/VideoPage.jsx: 9:16 player, Download MP4, final Approve / Send notes.
+- Tested: `npm run build` OK; dev server + backend (mock) up; a mock episode reached script review and the API data
+  matches what the pages read. Not yet clicked through in a browser by the owner.
+- Start: backend as in Stage 4, then `cd frontend; npm run dev` -> http://localhost:5173
+
 ## Next
-Stage 5 - React dashboard (Vite): new-episode form, episode list with stage (poll every few seconds), script review
-page with claim source links + Approve / Send Notes, video page with player, download and final approval.
+Stage 6 - start.bat (MySQL + backend + dashboard), run "A grain of sand vs 10 levels of speed" end to end, README
+with Mermaid diagram, roadmap, commit, GitHub push. First real (paid) Claude/Tavily run: ask the owner first.
