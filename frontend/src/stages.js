@@ -10,7 +10,9 @@ export const STAGES = [
   { key: "review_video", label: "Video review" },
 ];
 
-export const stageLabel = (key) => STAGES.find((s) => s.key === key)?.label || key;
+// "done" is not a graph node, but the backend stores it as the final stage.
+export const stageLabel = (key) =>
+  key === "done" ? "Done" : STAGES.find((s) => s.key === key)?.label || key;
 
 export const STATUS_LABEL = {
   running: "Working",
