@@ -175,3 +175,7 @@ table.list { width: 100%; border-collapse: collapse; margin-top: 8px; }
 .search-n { display: inline-block; min-width: 22px; text-align: center; margin-right: 6px; border-radius: 6px; background: rgba(0, 194, 255, .12); color: var(--cyan); font-size: 12px; padding: 1px 0; }
 .search-r { font-size: 13px; margin-left: 30px; }
 details summary { cursor: pointer; color: var(--cyan); font-weight: 600; margin: 8px 0; }
+
+/* ---------- failed-claims warning on the script review ---------- */
+.warn-box { margin: 8px 0 12px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--orange); background: rgba(255, 107, 44, .12); color: #ffd2bf; font-size: 14px; }
+.warn-box b { color: var(--orange); }

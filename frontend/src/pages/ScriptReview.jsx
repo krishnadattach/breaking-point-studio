@@ -21,8 +21,11 @@ export default function ScriptReview({ ep, onChanged }) {
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [confirming, setConfirming] = useState(false); // second click needed when claims failed
 
   const claimByLevel = Object.fromEntries((script.claims || []).map((c) => [c.level, c]));
+  // Levels whose claim did not pass fact-check (or was never checked): approving these needs a confirmation.
+  const failedLevels = script.levels.filter((lv) => claimByLevel[lv.n]?.status !== "pass").map((lv) => lv.n);
   const scriptNotes = ep.approvals.filter((a) => a.kind === "script");
 
   async function act(fn) {
@@ -104,6 +107,16 @@ export default function ScriptReview({ ep, onChanged }) {
       {waiting ? (
         <section className="card review-box">
           <h3>Your decision</h3>
+          {failedLevels.length > 0 && (
+            <div className="warn-box">
+              <b>
+                Warning: {failedLevels.length} claim{failedLevels.length === 1 ? "" : "s"} failed fact-check (level
+                {failedLevels.length === 1 ? "" : "s"} {failedLevels.join(", ")}).
+              </b>{" "}
+              These numbers may not be supported by their sources. Check the orange reasons above, or send notes so the
+              writer fixes them.
+            </div>
+          )}
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -111,12 +124,31 @@ export default function ScriptReview({ ep, onChanged }) {
             rows={3}
           />
           <div className="row">
-            <button className="btn primary" disabled={busy} onClick={() => act(() => approve(ep.id))}>
-              Approve script
-            </button>
+            {confirming ? (
+              <>
+                <button
+                  className="btn warm"
+                  disabled={busy}
+                  onClick={() => act(async () => { await approve(ep.id); setConfirming(false); })}
+                >
+                  Yes, approve with {failedLevels.length} failed claim{failedLevels.length === 1 ? "" : "s"}
+                </button>
+                <button className="btn" disabled={busy} onClick={() => setConfirming(false)}>
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button
+                className="btn primary"
+                disabled={busy}
+                onClick={() => (failedLevels.length > 0 ? setConfirming(true) : act(() => approve(ep.id)))}
+              >
+                Approve script
+              </button>
+            )}
             <button
               className="btn warm"
-              disabled={busy || !notes.trim()}
+              disabled={busy || confirming || !notes.trim()}
               onClick={() => act(() => sendNotes(ep.id, notes.trim()))}
             >
               Send notes
