@@ -1,6 +1,8 @@
 # Breaking Point Studio
 
-A human-in-the-loop, multi-agent pipeline that makes YouTube Shorts for the channel **"The Breaking Point"**.
+A human-in-the-loop **agentic workflow** (built with LangGraph) that makes YouTube Shorts for the channel
+**"The Breaking Point"**. Claude-powered steps are chained in a graph with loops and two human approval gates.
+It is a workflow, not a team of autonomous agents: see [What is and isn't an agent](#what-is-and-isnt-an-agent).
 
 Each episode puts **one object** through **10 escalating levels** of one hazard (heat, cold, pressure, impact speed,
 lightning or spin) until it fails. Every level has a real measured value and a **SURVIVES / DESTROYED** verdict, and each
@@ -8,9 +10,9 @@ episode has one surprising **twist level**.
 
 You type a topic such as *"A grain of sand vs 10 levels of speed"*, click **Start**, and the system:
 
-1. researches real facts on the web,
+1. searches the web for facts (three fixed search queries built from the topic),
 2. writes a structured 10-level script with Claude,
-3. fact-checks every claim against its source (and sends failures back for a rewrite),
+3. fact-checks every claim against its source with Claude (and sends failures back for a rewrite),
 4. **pauses for your review** of the script (approve, or send notes),
 5. records a voiceover, renders one 3D shot per level in Blender, and assembles a 1080x1920 MP4 with captions,
 6. **pauses again** for your final approval of the video.
@@ -60,6 +62,23 @@ flowchart LR
 - **Cheap model for simple work**: Claude Haiku does the fact-check; Claude Sonnet writes the script.
 - **Mock mode**: with no API keys (or `MOCK_LLM=1` / `MOCK_SEARCH=1`) the pipeline uses fake research and a fake
   script, so you can test everything for free.
+
+## What is and isn't an agent
+
+In simple terms: an *agent* is an AI that is given tools and a goal, and itself decides what to do next (which tool to
+call, with what input, and when it is finished), in a loop. A *workflow* is a fixed route that the code decides in advance.
+
+| Step | What it is today |
+|---|---|
+| `research` | **Fixed code, no AI.** It always runs the same 3 search templates (about the object, the hazard values, what happens under the hazard) through Tavily and collects the results. The AI does not choose queries, does not read the results to decide what to look up next, and does not decide when it has enough. |
+| `write_script` | One Claude call that fills in a structured form (no tools). |
+| `fact_check` | One Claude (Haiku) call that judges each claim against its source text (no tools). |
+| `review_script`, `review_video` | A human decides (LangGraph interrupt). |
+| `voiceover`, `render`, `assemble` | Plain code driving Windows TTS, Blender and FFmpeg. |
+
+The loops (fact-check failed, so rewrite; reviewer sent notes, so rewrite) are real, but the *code* decides when to loop
+(a counter and the human's button), not the AI. So this project is an LLM-powered workflow with human-in-the-loop control,
+and no step is a tool-using agent yet. Upgrading `research` is the first roadmap item.
 
 ## Project layout
 
@@ -134,6 +153,9 @@ fact-check loops add more drafts. Use mock mode while testing.
 
 ## Roadmap
 
+- **Upgrade research to a tool-using agent**: give Claude the search tool (and a page-reader) and let it choose its own
+  queries, read results, follow up on gaps (for example "I need a real value for level 8"), and decide when it has enough
+  sources, with a step and cost limit. This would also help the weak spread of values seen in the first real run.
 - **Better voice**: replace Windows SAPI with a neural text-to-speech voice; sync the verdict flash to the spoken word.
 - **Better visuals**: real objects instead of a sphere, richer per-hazard effects (melting, cracking, shattering),
   higher Eevee quality, camera moves, sound effects and music.
