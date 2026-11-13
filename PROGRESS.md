@@ -11,7 +11,7 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
 | 5 - React dashboard | DONE (builds; owner to click through) |
 | 6 - Finish (start.bat, README, GitHub) | DONE |
 | 7 - Upgrades (research agent, robust writer, approve safeguard) | DONE (first real run completed) |
-| 8 - Fixes from the first real run (fact-check order, twist rule, hook check, trusted sources) | DONE (mock/fake-tested; real run pending) |
+| 8 - Fixes from the first real run (fact-check order, twist rule, hook check, trusted sources) | DONE (confirmed by the second real run, LEGO) |
 
 ## Stage 1 - Setup (DONE)
 - git repo, .gitignore (ignores .env, .venv, output/, mysql-data/), .env / .env.example, .venv
@@ -177,6 +177,30 @@ warning counting the hook). The backend on port 8000 was started BEFORE these ch
 - Cost: 3 Sonnet drafts + 3 fact-check passes + 5 Tavily searches for one episode; the two fact-check loops are the main
   multiplier.
 
+## Second real run: ep-e55efaa8 "A LEGO brick vs 10 levels of pressure" (script v2 + video approved by the owner)
+What the Stage 8 fixes achieved (confirmed by the owner and the database):
+- No social-media or forum sources. The hook was fact-checked. The twist was a SURVIVES level with no invented DESTROYED.
+  No checker contradictions (reason and verdict agreed). All 11 claims (hook + 10) passed in both drafts.
+- The research agent was honest: its GAPS said it found no LEGO-specific pressure data and no twist fact.
+- The owner's review notes worked, and the writer pointed out that a number the owner gave was not in its sources
+  (it did not just accept it).
+
+Lessons (new problems this run showed; nothing here is fixed yet, see the README roadmap):
+1. **Grounded is not the same as relevant.** Most levels were strengths of OTHER materials (clay, concrete, steel), not
+   loads on a LEGO brick, and every claim still passed. The fact-check asks "does the source say this?", never "is this
+   about the object?". A claim can be perfectly sourced and still irrelevant to the video.
+2. **Verdicts are not fact-checked.** Draft 1 said the brick SURVIVES 20 and 30.4 MPa, based on data for solid ABS. A real
+   2x2 brick is hollow: the Open University crushed one at 4,240 N, roughly 17 MPa over its footprint. The claims were
+   true (about ABS) but the SURVIVES/DESTROYED verdict built on them was wrong. Only the owner's review caught it.
+3. **The agent stopped too early.** It used 4 of its 5 searches even though its own notes said it had found no LEGO-specific
+   data, and it never found that famous test. Having budget left plus a self-declared gap should not allow stopping.
+4. **Review notes only reach the writer.** The owner's notes mentioned the Open University test, but notes go to
+   write_script, which cannot search, so the writer could not research it (it could only say it was not in its sources).
+   Research and writing are separate steps with no way back from review to research.
+Also seen: the research results included tavily.com pages among the sources (not blocked, harmless but not an authority).
+Small fix made after this run: the twist line on the script page showed a double period ("..") because the writer's
+`twist_expectation` already ended with one; the dashboard now strips trailing periods before adding its own.
+
 ## Known quality issues (for the roadmap)
 - Seen in the real run before Stage 7 (should improve now, not re-checked): levels 1-6 were all tiny speeds from one
   threshold table; the "twist" was also DESTROYED; 3 claims still failed after the 2-loop maximum.
@@ -190,5 +214,6 @@ warning counting the hook). The backend on port 8000 was started BEFORE these ch
 - README and CLAUDE.md say "agentic workflow" (not multi-agent); research is now the one tool-using agent.
 
 ## Next (roadmap, see README)
-1. A second REAL run (ask the owner first) to confirm the Stage 8 fixes (restart the backend first).
-2. Page-reader tool for the research agent; better voice and visuals; visual QA; evals; analytics.
+1. Research quality (from the LEGO run): page-reader tool; relevance check (is each level about the object itself?); verdict
+   check; do not let the agent stop while key data is missing; let review notes send the episode back to research.
+2. Better voice and visuals; visual QA; evals; analytics.

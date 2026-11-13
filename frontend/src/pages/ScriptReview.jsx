@@ -76,7 +76,7 @@ export default function ScriptReview({ ep, onChanged }) {
         {hookClaim?.status !== "pass" && hookClaim?.reason && <p className="reason">{hookClaim.reason}</p>}
         {script.twist_expectation && (
           <p className="twist-why">
-            <b className="orange">Twist, level {script.twist_level}:</b> viewers expect: {script.twist_expectation}.{" "}
+            <b className="orange">Twist, level {script.twist_level}:</b> viewers expect: {script.twist_expectation.trim().replace(/[.\s]+$/, "")}.{" "}
             {script.twist_explanation}
           </p>
         )}

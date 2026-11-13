@@ -163,8 +163,19 @@ fact-check loops add more drafts. Use mock mode while testing.
 - **Done: research is a tool-using agent** (cheap model + Tavily, max 5 searches, queries saved and shown in the
   dashboard); script validation with one retry; the prompt demands the full value range and a real twist; the dashboard
   asks for confirmation before approving a script with failed claims.
-- **Deeper research agent**: add a page-reader tool so it can open a source instead of relying on search excerpts, and
-  let fact-check use the agent's findings, not only the excerpts.
+- **Page-reader tool for the research agent**: let it open a source page instead of relying on 1,200-character search
+  excerpts (also fixes many false "the excerpt does not say that" fact-check failures). Let fact-check use the agent's
+  findings, not only the excerpts.
+- **Relevance check**: a check that each level is about the object itself. Today a claim passes if its source supports
+  it, even when it is about another material (a LEGO episode used clay, concrete and steel strengths).
+- **Verdict check**: fact-check the SURVIVES/DESTROYED verdicts, not only the claims behind them (a hollow brick was
+  judged by solid-plastic data and wrongly "survived" 20-30 MPa). For example, compare the level's value with the
+  object's real failure data, or flag verdicts that rest on a proxy material.
+- **Do not let the agent stop while key data is missing**: if its own GAPS say the object-specific data is absent and it
+  still has searches left, make it keep going (or fail the research step loudly) instead of handing over analogues.
+- **Review notes can send the episode back to research**: today notes go only to the writer, which cannot search, so a
+  reviewer's pointer (e.g. "look for the Open University crush test") cannot be followed. Add a "research again with
+  these notes" path.
 - **Better voice**: replace Windows SAPI with a neural text-to-speech voice; sync the verdict flash to the spoken word.
 - **Better visuals**: real objects instead of a sphere, richer per-hazard effects (melting, cracking, shattering),
   higher Eevee quality, camera moves, sound effects and music.
