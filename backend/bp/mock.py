@@ -46,12 +46,13 @@ def script(topic: str) -> dict:
     twist = 7
     levels = []
     for i, v in enumerate(values, start=1):
-        # mock rule: survives early levels, is destroyed from level 8, and the
-        # twist level (7) is a surprising SURVIVES
-        verdict = "SURVIVES" if i < 8 else "DESTROYED"
+        # mock rule: survives levels 1-4, destroyed at 5-6, then level 7 is the twist (a surprising SURVIVES),
+        # destroyed again from level 8. This satisfies write_script's own validation rules.
+        verdict = "SURVIVES" if i <= 4 or i == twist else "DESTROYED"
         levels.append({
             "n": i,
-            "narration": f"Level {i}: {v} {unit}. {obj.capitalize()} {'survives' if verdict == 'SURVIVES' else 'is destroyed'}.",
+            "narration": (f"Level {i}: {v} {unit}. " + ("Surprise! " if i == twist else "")
+                          + f"{obj.capitalize()} {'survives' if verdict == 'SURVIVES' else 'is destroyed'}."),
             "value": f"{v} {unit}",
             "verdict": verdict,
             "claim": f"MOCK claim: {obj} faces {v} {unit} at level {i}.",
