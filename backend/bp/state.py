@@ -42,6 +42,7 @@ class State(TypedDict, total=False):
     topic: str                 # e.g. "A grain of sand vs 10 levels of speed"
     stage: str                 # which node is active - the dashboard shows this
     sources: list[dict]        # [{url, title, snippet}]
+    research_notes: str        # the research agent's findings summary (values harmless -> destructive + twist fact)
     script: dict               # Script as a dict
     claims: list[dict]         # [{level, claim, source_url, status, reason}]
     fact_loops: int

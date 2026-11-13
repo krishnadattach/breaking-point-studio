@@ -8,6 +8,7 @@ Two kinds of data live in MySQL, in the same database:
 Tables:
   episodes   one row per episode (topic, current stage, status)
   sources    web pages found by research
+  research_queries  every search the research agent chose to run (in order)
   scripts    every script draft (a new version each time write_script runs)
   claims     one row per level's factual claim + whether fact_check passed it
   approvals  every human decision (approve / send notes) on a script or video
@@ -36,6 +37,16 @@ SCHEMA = [
         url VARCHAR(1000) NOT NULL,
         title VARCHAR(500) NULL,
         snippet TEXT NULL,
+        FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE CASCADE
+    )""",
+    """CREATE TABLE IF NOT EXISTS research_queries (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        episode_id VARCHAR(32) NOT NULL,
+        seq INT NOT NULL,
+        query VARCHAR(500) NOT NULL,
+        result_count INT NOT NULL DEFAULT 0,
+        urls_json JSON NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE CASCADE
     )""",
     """CREATE TABLE IF NOT EXISTS scripts (
@@ -109,6 +120,11 @@ def init_db():
     with connect() as c, c.cursor() as cur:
         for stmt in SCHEMA:
             cur.execute(stmt)
+        # Small migration: older databases lack episodes.research_notes (the agent's findings summary).
+        cur.execute("SELECT COUNT(*) AS n FROM information_schema.COLUMNS "
+                    "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='episodes' AND COLUMN_NAME='research_notes'")
+        if cur.fetchone()["n"] == 0:
+            cur.execute("ALTER TABLE episodes ADD COLUMN research_notes MEDIUMTEXT NULL")
 
 
 # ---------------- writes (called by the graph nodes) ----------------
@@ -128,6 +144,25 @@ def save_sources(episode_id: str, sources: list[dict]):
         cur.execute("DELETE FROM sources WHERE episode_id=%s", (episode_id,))
         cur.executemany("INSERT INTO sources (episode_id, url, title, snippet) VALUES (%s,%s,%s,%s)",
                         [(episode_id, s["url"], s.get("title", ""), s.get("snippet", "")) for s in sources])
+
+
+def reset_research(episode_id: str):
+    """Start of the research step: forget any earlier attempt (a retry must not show duplicate searches)."""
+    with connect() as c, c.cursor() as cur:
+        cur.execute("DELETE FROM research_queries WHERE episode_id=%s", (episode_id,))
+        cur.execute("UPDATE episodes SET research_notes=NULL WHERE id=%s", (episode_id,))
+
+
+def add_research_query(episode_id: str, seq: int, query: str, urls: list[str]):
+    """One search the agent chose. Written the moment it runs, so the dashboard can show it live."""
+    with connect() as c, c.cursor() as cur:
+        cur.execute("INSERT INTO research_queries (episode_id, seq, query, result_count, urls_json) "
+                    "VALUES (%s,%s,%s,%s,%s)", (episode_id, seq, query[:500], len(urls), json.dumps(urls)))
+
+
+def save_research_notes(episode_id: str, notes: str):
+    with connect() as c, c.cursor() as cur:
+        cur.execute("UPDATE episodes SET research_notes=%s WHERE id=%s", (notes, episode_id))
 
 
 def save_script_with_claims(episode_id: str, script: dict, claims: list[dict]):
@@ -161,7 +196,7 @@ def save_asset(episode_id: str, kind: str, label: str, path: str, seconds: float
 # ---------------- reads (used by the API in stage 4) ----------------
 def list_episodes() -> list[dict]:
     with connect() as c, c.cursor() as cur:
-        cur.execute("SELECT * FROM episodes ORDER BY created_at DESC")
+        cur.execute("SELECT id, topic, stage, status, error, created_at, updated_at FROM episodes ORDER BY created_at DESC")
         return cur.fetchall()
 
 
@@ -181,8 +216,15 @@ def get_episode(episode_id: str) -> dict | None:
             script["claims"] = cur.fetchall()
         cur.execute("SELECT url, title, snippet FROM sources WHERE episode_id=%s", (episode_id,))
         sources = cur.fetchall()
+        cur.execute("SELECT seq, query, result_count, urls_json, created_at FROM research_queries "
+                    "WHERE episode_id=%s ORDER BY seq", (episode_id,))
+        queries = cur.fetchall()
+        for q in queries:
+            q["urls"] = json.loads(q.pop("urls_json") or "[]")
         cur.execute("SELECT kind, action, notes, created_at FROM approvals WHERE episode_id=%s ORDER BY id", (episode_id,))
         approvals = cur.fetchall()
         cur.execute("SELECT kind, label, path, seconds FROM assets WHERE episode_id=%s ORDER BY id", (episode_id,))
         assets = cur.fetchall()
-        return {**ep, "script": script, "sources": sources, "approvals": approvals, "assets": assets}
+        notes = ep.pop("research_notes", None)
+        return {**ep, "script": script, "sources": sources, "approvals": approvals, "assets": assets,
+                "research": {"queries": queries, "notes": notes}}

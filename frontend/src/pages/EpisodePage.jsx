@@ -2,6 +2,7 @@ import { useState } from "react";
 import { getEpisode, retry } from "../api.js";
 import { Badge, ErrorBox, StageTrack } from "../components.jsx";
 import usePolling from "../usePolling.js";
+import ResearchPanel from "./ResearchPanel.jsx";
 import ScriptReview from "./ScriptReview.jsx";
 import VideoPage from "./VideoPage.jsx";
 
@@ -24,6 +25,7 @@ export default function EpisodePage({ id }) {
 
   const hasVideo = ep.assets.some((a) => a.kind === "final_video");
   const hasScript = !!ep.script;
+  const hasResearch = ep.research.queries.length > 0 || !!ep.research.notes;
   const auto = ep.status === "waiting_script_review" ? "script" : hasVideo ? "video" : hasScript ? "script" : "progress";
   const view = tab || auto;
 
@@ -60,8 +62,13 @@ export default function EpisodePage({ id }) {
         </div>
       )}
 
-      {(hasScript || hasVideo) && (
+      {(hasScript || hasVideo || hasResearch) && (
         <nav className="tabs">
+          {hasResearch && (
+            <button className={view === "research" ? "on" : ""} onClick={() => setTab("research")}>
+              Research
+            </button>
+          )}
           {hasScript && (
             <button className={view === "script" ? "on" : ""} onClick={() => setTab("script")}>
               Script
@@ -75,8 +82,10 @@ export default function EpisodePage({ id }) {
         </nav>
       )}
 
+      {view === "research" && <ResearchPanel research={ep.research} working={working} />}
       {view === "script" && <ScriptReview ep={ep} onChanged={reload} />}
       {view === "video" && <VideoPage ep={ep} onChanged={reload} />}
+      {view === "progress" && working && hasResearch && <ResearchPanel research={ep.research} working={working} />}
       {view === "progress" && working && (
         <div className="card">
           <p>

@@ -34,6 +34,12 @@ def search(topic: str) -> list[dict]:
     ]
 
 
+def research_notes(topic: str) -> str:
+    return (f"MOCK research notes for {topic}.\nFINDINGS:\n- (mock values, not real) | mock | "
+            "https://example.com/mock-source-1\nTWIST FACT: MOCK surprising fact | https://example.com/mock-source-2\n"
+            "GAPS: none")
+
+
 def script(topic: str) -> dict:
     obj, hazard = parse_topic(topic)
     unit, values = HAZARDS[hazard]
