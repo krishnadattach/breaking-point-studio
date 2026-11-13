@@ -9,7 +9,7 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
 | 3 - MySQL tables | DONE (mock-tested) |
 | 4 - FastAPI | DONE (mock-tested) |
 | 5 - React dashboard | DONE (builds; owner to click through) |
-| 6 - Finish (start.bat, README, GitHub) | not started |
+| 6 - Finish (start.bat, README, GitHub) | IN PROGRESS |
 
 ## Stage 1 - Setup (DONE)
 - git repo, .gitignore (ignores .env, .venv, output/, mysql-data/), .env / .env.example, .venv
@@ -73,6 +73,16 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
   matches what the pages read. Not yet clicked through in a browser by the owner.
 - Start: backend as in Stage 4, then `cd frontend; npm run dev` -> http://localhost:5173
 
-## Next
-Stage 6 - start.bat (MySQL + backend + dashboard), run "A grain of sand vs 10 levels of speed" end to end, README
-with Mermaid diagram, roadmap, commit, GitHub push. First real (paid) Claude/Tavily run: ask the owner first.
+## Stage 6 - Finish (IN PROGRESS)
+Done so far:
+- Dashboard fix: Stage column shows "Done" (was lowercase `done`); stages.js `stageLabel`.
+- Git identity set for this repo to Krishna Datta + GitHub noreply email; all 4 old commits rewritten, old refs/reflog
+  purged (no trace of the old email). History scanned: the real API keys / DB password appear in no commit.
+- start.bat written (MySQL + backend + dashboard + browser; `start.bat mock` = free mode). Not yet run: the
+  Stage 4-5 test servers are still running on ports 8000/5173/3307 and must be stopped first.
+
+Next:
+1. OWNER APPROVAL for the first real (paid) run, then delete the 3 old mock episodes (DB rows + checkpoints + output/ folders).
+2. Test start.bat, run "A grain of sand vs 10 levels of speed" for real, end to end.
+3. README (what it does, Mermaid diagram, how to run, roadmap).
+4. Commit; create the PUBLIC GitHub repo (gh CLI not installed yet) and push.
