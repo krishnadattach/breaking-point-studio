@@ -9,7 +9,7 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
 | 3 - MySQL tables | DONE (mock-tested) |
 | 4 - FastAPI | DONE (mock-tested) |
 | 5 - React dashboard | DONE (builds; owner to click through) |
-| 6 - Finish (start.bat, README, GitHub) | DONE except the GitHub push (waiting for `gh auth login`) |
+| 6 - Finish (start.bat, README, GitHub) | DONE |
 
 ## Stage 1 - Setup (DONE)
 - git repo, .gitignore (ignores .env, .venv, output/, mysql-data/), .env / .env.example, .venv
@@ -73,7 +73,7 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
   matches what the pages read. Not yet clicked through in a browser by the owner.
 - Start: backend as in Stage 4, then `cd frontend; npm run dev` -> http://localhost:5173
 
-## Stage 6 - Finish (DONE except the push)
+## Stage 6 - Finish (DONE)
 - Dashboard fix: Stage column shows "Done" (`stageLabel` in frontend/src/stages.js).
 - start.bat (MySQL + backend + dashboard + browser) and start_mock.bat (same, free mock mode). From a terminal use
   `.\start.bat` (plain `start.bat` is read by cmd as its built-in `start`).
@@ -95,7 +95,12 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
   2-loop maximum (the owner approved anyway). Prompt/evals work: demand a real spread of values and a real twist.
 - Skeleton visuals/voice as listed above.
 
-## Next
-1. Owner: `gh auth login`. Then create the PUBLIC repo (`gh repo create ... --public --source . --push`).
-2. After the push: re-run the secret scan on what was pushed; then roadmap items (better voice, visuals, visual QA,
-   evals, analytics).
+## GitHub
+- PUBLIC repo: https://github.com/krishnadattach/breaking-point-studio (branch main, remote `origin`).
+- Verified from a fresh clone of GitHub: all commits by Krishna Datta (noreply email); no .env, output/, mysql-data/;
+  the real API keys / DB password appear in no commit; no personal path or old email.
+- README and CLAUDE.md say "agentic workflow" (not multi-agent); research is a fixed step, not yet an agent.
+
+## Next (roadmap, see README)
+Upgrade research to a tool-using agent; better script prompts (real value spread, real twist); better voice and
+visuals; visual QA; evals; analytics.
