@@ -1,6 +1,6 @@
 # Breaking Point Studio
 
-A human-in-the-loop multi-agent system (LangGraph) that makes YouTube Shorts for "The Breaking Point":
+A human-in-the-loop agentic workflow (LangGraph; LLM steps in a graph, not autonomous agents) that makes YouTube Shorts for "The Breaking Point":
 one object faces 10 escalating levels of heat, cold, pressure, impact speed, lightning or spin until it fails.
 Each episode has one surprising twist level and a SURVIVES/DESTROYED verdict per level.
 

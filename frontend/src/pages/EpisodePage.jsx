@@ -80,7 +80,7 @@ export default function EpisodePage({ id }) {
       {view === "progress" && working && (
         <div className="card">
           <p>
-            <span className="spinner" /> The agents are working. This page refreshes by itself.
+            <span className="spinner" /> The pipeline is working. This page refreshes by itself.
           </p>
         </div>
       )}

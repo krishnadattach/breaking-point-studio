@@ -27,7 +27,7 @@ function NewEpisodeForm() {
   return (
     <form className="card new-episode" onSubmit={submit}>
       <h2>New episode</h2>
-      <p className="muted">Name an object and a hazard. The agents research it, write the script, then wait for you.</p>
+      <p className="muted">Name an object and a hazard. The pipeline researches it, writes the script, then wait for you.</p>
       <div className="row">
         <input
           value={topic}
