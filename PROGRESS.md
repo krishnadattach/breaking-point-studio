@@ -1,6 +1,6 @@
 # Progress
 
-The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-12.
+The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-12 (Stage 7).
 
 | Stage | Status |
 |---|---|
@@ -10,6 +10,7 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
 | 4 - FastAPI | DONE (mock-tested) |
 | 5 - React dashboard | DONE (builds; owner to click through) |
 | 6 - Finish (start.bat, README, GitHub) | DONE |
+| 7 - Upgrades (research agent, robust writer, approve safeguard) | DONE (mock/fake-tested; real run pending) |
 
 ## Stage 1 - Setup (DONE)
 - git repo, .gitignore (ignores .env, .venv, output/, mysql-data/), .env / .env.example, .venv
@@ -89,18 +90,47 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
 - README.md written (what it does, Mermaid architecture diagram, setup, how to run, roadmap).
 - gh CLI installed; owner signs in with `gh auth login`.
 
+## Stage 7 - Upgrades (DONE, tested in mock/fake mode only)
+- **Research is a real tool-using agent** (backend/bp/nodes/research.py): LangChain `create_agent` + the cheap model + one
+  tool `web_search` (Tavily). It chooses its own queries, reads results, fills gaps, decides when to stop. Hard limit 5
+  searches (counted inside the tool, thread-safe; a 6th call just gets "limit reached"). Ends with a FINDINGS / TWIST FACT
+  / GAPS summary, passed to the writer as `research_notes`. Safety: one fallback search if it never searched; step limit.
+- DB: new table `research_queries` (every query, result count, URLs, in order, written live) + `episodes.research_notes`
+  (added automatically by `init_db` on older databases). `GET /episodes/{id}` now has `research: {queries, notes}`.
+- Dashboard: new "Research" tab / live panel on the episode page: "N of 5 searches used", each query, results, summary.
+- Mock mode unchanged for the owner: with either key missing (or MOCK_LLM/MOCK_SEARCH=1) research records 3 labelled MOCK
+  queries and fake sources, free.
+- **write_script is robust**: structured output is requested with `include_raw`, then `validate_script` checks 10 levels
+  numbered 1-10, distinct values, level 1 SURVIVES, at least one DESTROYED, narration length, twist level 3-9 whose
+  verdict differs from the level before it. Invalid -> ONE retry that includes the validation error; still invalid ->
+  clear error (episode shows Retry). At most 2 Sonnet calls per attempt.
+- **Writer prompt**: level 1 harmless, level 10 extreme, steady spread, no single threshold table; the twist must be a real
+  surprise (best: SURVIVES where viewers expect failure, not just another DESTROYED). The mock script follows the same rules.
+- **Dashboard safeguard**: ScriptReview shows an orange warning listing failed levels; Approve then needs a second
+  "Yes, approve with N failed claims" click (or Cancel). This is a dashboard check only; the API itself still accepts approve.
+- Tests (free, no API calls): `cd backend; ..\.venv\Scripts\python -m tests.test_research_agent` (scripted fake model:
+  proves the 5-search limit, early stop, fallback, DB rows) and `... -m tests.test_write_script` (validator + retry).
+  Also: a full mock episode over HTTP reached script review with 3 queries saved; `npm run build` OK; the review
+  component was rendered with fake failed claims (warning shows only when claims failed).
+- NOT yet tested with real Claude/Tavily: how well Haiku drives the agent, and whether the new writer prompt gives a
+  better spread and twist. Needs one real run (ask the owner first; it adds <= 5 Tavily searches and a few cheap Haiku
+  calls on top of the usual Sonnet script). The Approve confirmation click flow was not clicked in a browser.
+- Incident: while testing, a start request went to an OLDER backend still running on port 8000 in real mode, which began
+  a real run (one Tavily research pass and the start of a Sonnet call, a few cents at most). It was stopped at once and
+  its episode deleted. Before mock tests, check nothing else is listening on the port.
+
 ## Known quality issues (for the roadmap)
-- Script quality on the real run: levels 1-6 were all tiny wind speeds from one threshold table; the "twist" (level 10,
-  99.9% of light speed) was also DESTROYED so it was not a real twist; 3 claims still failed fact-check after the
-  2-loop maximum (the owner approved anyway). Prompt/evals work: demand a real spread of values and a real twist.
+- Seen in the real run before Stage 7 (should improve now, not re-checked): levels 1-6 were all tiny speeds from one
+  threshold table; the "twist" was also DESTROYED; 3 claims still failed after the 2-loop maximum.
+- fact_check only sees each source's search excerpt (<= 1200 chars), so correct claims can still fail.
 - Skeleton visuals/voice as listed above.
 
 ## GitHub
 - PUBLIC repo: https://github.com/krishnadattach/breaking-point-studio (branch main, remote `origin`).
 - Verified from a fresh clone of GitHub: all commits by Krishna Datta (noreply email); no .env, output/, mysql-data/;
   the real API keys / DB password appear in no commit; no personal path or old email.
-- README and CLAUDE.md say "agentic workflow" (not multi-agent); research is a fixed step, not yet an agent.
+- README and CLAUDE.md say "agentic workflow" (not multi-agent); research is now the one tool-using agent.
 
 ## Next (roadmap, see README)
-Upgrade research to a tool-using agent; better script prompts (real value spread, real twist); better voice and
-visuals; visual QA; evals; analytics.
+1. One REAL run (ask the owner first) to judge the agent's queries and the new script quality.
+2. Page-reader tool for the research agent; better voice and visuals; visual QA; evals; analytics.

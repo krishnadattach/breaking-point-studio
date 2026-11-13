@@ -1,8 +1,9 @@
 # Breaking Point Studio
 
 A human-in-the-loop **agentic workflow** (built with LangGraph) that makes YouTube Shorts for the channel
-**"The Breaking Point"**. Claude-powered steps are chained in a graph with loops and two human approval gates.
-It is a workflow, not a team of autonomous agents: see [What is and isn't an agent](#what-is-and-isnt-an-agent).
+**"The Breaking Point"**. Claude-powered steps are chained in a graph with loops and two human approval gates, and
+the research step is a real tool-using agent. It is not a team of autonomous agents: see
+[What is and isn't an agent](#what-is-and-isnt-an-agent).
 
 Each episode puts **one object** through **10 escalating levels** of one hazard (heat, cold, pressure, impact speed,
 lightning or spin) until it fails. Every level has a real measured value and a **SURVIVES / DESTROYED** verdict, and each
@@ -10,10 +11,12 @@ episode has one surprising **twist level**.
 
 You type a topic such as *"A grain of sand vs 10 levels of speed"*, click **Start**, and the system:
 
-1. searches the web for facts (three fixed search queries built from the topic),
-2. writes a structured 10-level script with Claude,
+1. a **research agent** (cheap Claude + the Tavily search tool) chooses its own web searches (at most 5) to find real
+   values from harmless to destructive plus one surprising fact,
+2. writes a structured 10-level script with Claude (validated, with one automatic retry if the output is invalid),
 3. fact-checks every claim against its source with Claude (and sends failures back for a rewrite),
-4. **pauses for your review** of the script (approve, or send notes),
+4. **pauses for your review** of the script (approve, or send notes; approving a script with failed claims asks you
+   to confirm),
 5. records a voiceover, renders one 3D shot per level in Blender, and assembles a 1080x1920 MP4 with captions,
 6. **pauses again** for your final approval of the video.
 
@@ -42,7 +45,8 @@ flowchart LR
         RV -- approve --> E([done])
     end
 
-    R -. search .-> T[(Tavily)]
+    R <-. "agent loop: choose query,<br/>read, repeat (max 5)" .-> T[(Tavily)]
+    R -. "cheap model" .-> C
     W -. LLM .-> C[(Claude API)]
     F -. LLM .-> C
     V -. "offline TTS" .-> SAPI[Windows SAPI]
@@ -59,9 +63,10 @@ flowchart LR
 - **MySQL checkpointer**: the graph's state is saved after every step, so a crash or restart resumes where it stopped.
   The readable tables (episodes, scripts, claims, ...) sit beside LangGraph's own checkpoint tables.
 - **Background runner**: rendering takes minutes, so FastAPI runs each episode in a thread and the dashboard polls.
-- **Cheap model for simple work**: Claude Haiku does the fact-check; Claude Sonnet writes the script.
+- **Cheap model for simple work**: Claude Haiku runs the research agent and the fact-check; Claude Sonnet writes the script.
 - **Mock mode**: with no API keys (or `MOCK_LLM=1` / `MOCK_SEARCH=1`) the pipeline uses fake research and a fake
-  script, so you can test everything for free.
+  script, so you can test everything for free. (The research agent needs both keys, so with either one missing or
+  forced to mock, research uses clearly labelled fake searches.)
 
 ## What is and isn't an agent
 
@@ -70,15 +75,16 @@ call, with what input, and when it is finished), in a loop. A *workflow* is a fi
 
 | Step | What it is today |
 |---|---|
-| `research` | **Fixed code, no AI.** It always runs the same 3 search templates (about the object, the hazard values, what happens under the hazard) through Tavily and collects the results. The AI does not choose queries, does not read the results to decide what to look up next, and does not decide when it has enough. |
-| `write_script` | One Claude call that fills in a structured form (no tools). |
+| `research` | **A real agent.** Claude (the cheap model) gets the `web_search` tool (Tavily) and a goal: find real measured values across the hazard's full range, harmless to destructive, plus one surprising fact for the twist. It chooses its own queries, reads the results, searches again to fill gaps, and decides when it has enough. Hard limit: 5 searches, enforced in the tool itself. Every query it chose is saved in MySQL (`research_queries`) and shown on the episode page. |
+| `write_script` | One Claude call that fills in a structured form (no tools). Its output is validated by code; if invalid it is retried once with the validation error. |
 | `fact_check` | One Claude (Haiku) call that judges each claim against its source text (no tools). |
 | `review_script`, `review_video` | A human decides (LangGraph interrupt). |
 | `voiceover`, `render`, `assemble` | Plain code driving Windows TTS, Blender and FFmpeg. |
 
-The loops (fact-check failed, so rewrite; reviewer sent notes, so rewrite) are real, but the *code* decides when to loop
-(a counter and the human's button), not the AI. So this project is an LLM-powered workflow with human-in-the-loop control,
-and no step is a tool-using agent yet. Upgrading `research` is the first roadmap item.
+The loops between the other steps (fact-check failed, so rewrite; reviewer sent notes, so rewrite; invalid output, so
+retry) are real, but the *code* decides when to loop (a counter, a validator, the human's button), not the AI. So the
+project is an LLM-powered workflow with human-in-the-loop control, with exactly **one** tool-using agent (research)
+inside it. The agent is deliberately small and capped (one tool, 5 searches) so its cost stays predictable.
 
 ## Project layout
 
@@ -148,20 +154,24 @@ Then in the dashboard:
 
 Command-line alternative (no dashboard): `cd backend` then `..\.venv\Scripts\python -m bp.cli "topic" --auto`.
 
-**Cost note:** a real run calls Claude (one Sonnet script per draft plus Haiku fact-checks) and Tavily. Notes and
+**Cost note:** a real run calls Claude (Haiku for the research agent and fact-checks, one Sonnet script per draft)
+and Tavily (at most 5 searches per episode). Notes and
 fact-check loops add more drafts. Use mock mode while testing.
 
 ## Roadmap
 
-- **Upgrade research to a tool-using agent**: give Claude the search tool (and a page-reader) and let it choose its own
-  queries, read results, follow up on gaps (for example "I need a real value for level 8"), and decide when it has enough
-  sources, with a step and cost limit. This would also help the weak spread of values seen in the first real run.
+- **Done: research is a tool-using agent** (cheap model + Tavily, max 5 searches, queries saved and shown in the
+  dashboard); script validation with one retry; the prompt demands the full value range and a real twist; the dashboard
+  asks for confirmation before approving a script with failed claims.
+- **Deeper research agent**: add a page-reader tool so it can open a source instead of relying on search excerpts, and
+  let fact-check use the agent's findings, not only the excerpts.
 - **Better voice**: replace Windows SAPI with a neural text-to-speech voice; sync the verdict flash to the spoken word.
 - **Better visuals**: real objects instead of a sphere, richer per-hazard effects (melting, cracking, shattering),
   higher Eevee quality, camera moves, sound effects and music.
 - **Visual QA**: automatically check sampled frames (is the object visible, do captions fit, does the verdict match
   the script) before the video reaches the human.
-- **Evals**: score scripts for escalation, a real twist and source support; track fact-check pass rate and cost per
+- **Evals**: score scripts for escalation, a real twist and source support (today only a simple validator checks the
+  basics); track fact-check pass rate and cost per
   episode; regression-test prompts.
 - **Analytics**: pull Shorts performance back in (retention, views per hazard) to choose the next topic.
 - **Publishing**: upload to YouTube after final approval; cross-platform (non-Windows) voiceover.
