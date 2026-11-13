@@ -11,8 +11,9 @@ def good() -> Script:
 
 
 def bad_same_verdict_twist() -> Script:
+    """The twist is placed on the first DESTROYED level = just the breaking point, not a surprise."""
     s = good()
-    s.levels[6].verdict = "DESTROYED"          # twist level 7 is now just another DESTROYED
+    s.twist_level = 6
     return s
 
 
@@ -31,8 +32,19 @@ def main():
     print("OK: the mock script passes validation")
 
     probs = validate_script(bad_same_verdict_twist())
-    assert any("not a real surprise" in p for p in probs), probs
-    print("OK: a DESTROYED-after-DESTROYED twist is rejected:", probs[0][:60], "...")
+    assert any("must be a level where the object SURVIVES" in p for p in probs), probs
+    print("OK: a DESTROYED twist (the breaking point) is rejected:", probs[0][:60], "...")
+
+    # the mock twist is a SURVIVES with NO fake DESTROYED level before it: that must be accepted
+    g = good()
+    assert all(x.verdict == "SURVIVES" for x in g.levels[: g.twist_level]), "mock should not need a fake DESTROYED"
+    print("OK: a SURVIVES twist needs no invented DESTROYED before it")
+
+    s = good(); s.twist_expectation = ""
+    assert any("twist_expectation" in p for p in validate_script(s))
+    s = good(); s.twist_explanation = "short"
+    assert any("twist_explanation" in p for p in validate_script(s))
+    print("OK: twist must say what viewers expect and what really happens")
 
     s = good(); s.levels = s.levels[:9]
     assert any("exactly 10" in p for p in validate_script(s))
@@ -51,7 +63,7 @@ def main():
     generate_script(f, [("system", "s"), ("human", "h")])
     assert len(f.sent) == 2
     retry_msg = f.sent[1][-1][1]
-    assert "not a real surprise" in retry_msg and "REJECTED" in retry_msg, retry_msg
+    assert "must be a level where the object SURVIVES" in retry_msg and "REJECTED" in retry_msg, retry_msg
     print("OK: retried once with the validation error in the prompt")
 
     # 3. the model's answer did not even parse (pydantic error) -> retry with that error

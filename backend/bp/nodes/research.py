@@ -21,6 +21,20 @@ from ..state import State
 MAX_SEARCHES = 5            # hard limit, enforced inside the tool (the model cannot talk its way past it)
 RECURSION_LIMIT = 25        # safety net on the agent loop itself (each search = ~2 steps)
 
+# Sites that are never good evidence for a fact-checked science video: dropped from every search, in code.
+BLOCKED_DOMAINS = [
+    "facebook.com", "instagram.com", "twitter.com", "x.com", "tiktok.com", "pinterest.com", "linkedin.com",
+    "reddit.com", "quora.com", "stackexchange.com", "stackoverflow.com", "answers.com", "answers.yahoo.com",
+    "medium.com", "tumblr.com", "wattpad.com", "fandom.com", "wikia.com", "youtube.com",
+]
+
+
+def is_blocked(url: str) -> bool:
+    from urllib.parse import urlparse
+    host = (urlparse(url).hostname or "").lower()
+    return any(host == d or host.endswith("." + d) for d in BLOCKED_DOMAINS)
+
+
 SYSTEM = """You are the research agent for the YouTube Shorts channel "The Breaking Point".
 In each episode ONE object faces 10 escalating levels of ONE hazard (heat, cold, pressure, impact speed, lightning or
 spin) until it fails. A writer will turn your findings into the script, so they need real facts.
@@ -38,6 +52,11 @@ HOW TO WORK
   for exactly that, with a more specific query. Do not repeat a query.
 - Stop as soon as you have enough. You do not have to use all 5 searches.
 - Only report values that appear in the search results. Never invent numbers.
+- SOURCES MATTER. Prefer trusted ones: government and agency sites (.gov, NASA, NIST, USGS), universities (.edu, .ac.uk),
+  peer-reviewed journals and publishers, standards bodies, and established reference works. Use Wikipedia only as a
+  fallback. Skip social media, forums, Q&A sites, blogs, fiction/worldbuilding and content farms (some are blocked
+  automatically). When you can, put words like "NIST", "NASA", "journal" or "measured" in your query to pull in
+  authoritative pages. Never use a value from a weak source; say so under GAPS instead.
 
 FINAL ANSWER (when you stop searching, reply with this and call no more tools)
 FINDINGS:
@@ -81,6 +100,7 @@ def run_research_agent(model, search: Callable[[str], list[dict]], episode_id: s
         except Exception as e:    # a failed search still counts; tell the agent so it can adapt
             db.add_research_query(episode_id, seq, query, [])
             return f"Search failed: {e}. ({max_searches - seq} searches left)"
+        results = [r for r in results if not is_blocked(r["url"])]    # belt and braces after Tavily's own exclusion
         db.add_research_query(episode_id, seq, query, [r["url"] for r in results])
         with lock:
             for r in results:
@@ -100,7 +120,7 @@ def run_research_agent(model, search: Callable[[str], list[dict]], episode_id: s
     if used == 0:    # the agent never searched: do one plain search so the writer is not left empty-handed
         with lock:
             used = 1
-        results = search(topic)
+        results = [r for r in search(topic) if not is_blocked(r["url"])]
         db.add_research_query(episode_id, 1, topic + "  (fallback: agent did not search)", [r["url"] for r in results])
         for r in results:
             sources.setdefault(r["url"], r)
@@ -109,7 +129,7 @@ def run_research_agent(model, search: Callable[[str], list[dict]], episode_id: s
 
 def _tavily_search(query: str) -> list[dict]:
     from langchain_tavily import TavilySearch
-    res = TavilySearch(max_results=4).invoke({"query": query})
+    res = TavilySearch(max_results=4, exclude_domains=BLOCKED_DOMAINS).invoke({"query": query})
     return [{"url": r["url"], "title": r.get("title", ""), "snippet": r.get("content", "")[:1200]}
             for r in res.get("results", [])]
 

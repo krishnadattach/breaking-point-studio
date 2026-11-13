@@ -10,7 +10,7 @@ Tables:
   sources    web pages found by research
   research_queries  every search the research agent chose to run (in order)
   scripts    every script draft (a new version each time write_script runs)
-  claims     one row per level's factual claim + whether fact_check passed it
+  claims     one row per factual claim (level 0 = the hook, 1-10 = the levels) + whether fact_check passed it
   approvals  every human decision (approve / send notes) on a script or video
   assets     files we generated: audio lines, rendered shots, the final video
 """
@@ -54,6 +54,9 @@ SCHEMA = [
         episode_id VARCHAR(32) NOT NULL,
         version INT NOT NULL,
         hook TEXT NOT NULL,
+        hook_source_url VARCHAR(1000) NULL,
+        twist_expectation TEXT NULL,
+        twist_explanation TEXT NULL,
         shape VARCHAR(20) NOT NULL,
         hazard VARCHAR(60) NOT NULL,
         twist_level INT NOT NULL,
@@ -120,11 +123,15 @@ def init_db():
     with connect() as c, c.cursor() as cur:
         for stmt in SCHEMA:
             cur.execute(stmt)
-        # Small migration: older databases lack episodes.research_notes (the agent's findings summary).
-        cur.execute("SELECT COUNT(*) AS n FROM information_schema.COLUMNS "
-                    "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='episodes' AND COLUMN_NAME='research_notes'")
-        if cur.fetchone()["n"] == 0:
-            cur.execute("ALTER TABLE episodes ADD COLUMN research_notes MEDIUMTEXT NULL")
+        # Small migrations: older databases lack these columns (added in later stages).
+        for table, column, ddl in [("episodes", "research_notes", "MEDIUMTEXT NULL"),
+                                   ("scripts", "hook_source_url", "VARCHAR(1000) NULL"),
+                                   ("scripts", "twist_expectation", "TEXT NULL"),
+                                   ("scripts", "twist_explanation", "TEXT NULL")]:
+            cur.execute("SELECT COUNT(*) AS n FROM information_schema.COLUMNS "
+                        "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s", (table, column))
+            if cur.fetchone()["n"] == 0:
+                cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
 
 
 # ---------------- writes (called by the graph nodes) ----------------
@@ -170,10 +177,11 @@ def save_script_with_claims(episode_id: str, script: dict, claims: list[dict]):
     with connect() as c, c.cursor() as cur:
         cur.execute("SELECT COALESCE(MAX(version),0)+1 AS v FROM scripts WHERE episode_id=%s", (episode_id,))
         version = cur.fetchone()["v"]
-        cur.execute("INSERT INTO scripts (episode_id, version, hook, shape, hazard, twist_level, levels_json) "
-                    "VALUES (%s,%s,%s,%s,%s,%s,%s)",
-                    (episode_id, version, script["hook"], script["shape"], script["hazard"],
-                     script["twist_level"], json.dumps(script["levels"])))
+        cur.execute("INSERT INTO scripts (episode_id, version, hook, hook_source_url, twist_expectation, "
+                    "twist_explanation, shape, hazard, twist_level, levels_json) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    (episode_id, version, script["hook"], script.get("hook_source_url", ""),
+                     script.get("twist_expectation", ""), script.get("twist_explanation", ""), script["shape"],
+                     script["hazard"], script["twist_level"], json.dumps(script["levels"])))
         script_id = cur.lastrowid
         cur.executemany("INSERT INTO claims (script_id, level, claim, source_url, status, reason) "
                         "VALUES (%s,%s,%s,%s,%s,%s)",

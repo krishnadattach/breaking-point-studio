@@ -39,8 +39,11 @@ class ScriptedModel(BaseChatModel):
 
 
 def fake_search(query: str) -> list[dict]:
-    return [{"url": f"https://example.com/{abs(hash(query)) % 1000}/{i}", "title": f"Result {i} for {query}",
+    good = [{"url": f"https://example.com/{abs(hash(query)) % 1000}/{i}", "title": f"Result {i} for {query}",
              "snippet": f"text about {query}"} for i in range(2)]
+    weak = [{"url": "https://www.facebook.com/some/post", "title": "fb", "snippet": "x"},
+            {"url": "https://worldbuilding.stackexchange.com/q/1", "title": "forum", "snippet": "x"}]
+    return good + weak      # every search also returns two weak sources, which must be dropped
 
 
 def main():
@@ -63,7 +66,10 @@ def main():
         assert "q6 (over the limit)" not in queries
         assert any("SEARCH LIMIT REACHED" in m for m in model.seen_tool_messages), "6th search was not refused"
         assert notes.startswith("FINDINGS"), notes
-        assert len(sources) == 10, len(sources)
+        assert len(sources) == 10, len(sources)          # weak sources were dropped (5 searches x 2 good ones)
+        assert not any("facebook" in u["url"] or "stackexchange" in u["url"] for u in sources)
+        assert all(r["result_count"] == 2 for r in rows), "saved queries must not list blocked sites"
+        print("OK: facebook / forum results were dropped")
         print("OK: limit of 5 held, 6th search refused, notes + sources returned")
 
         # an agent that stops early (cheap and fine): 1 search only

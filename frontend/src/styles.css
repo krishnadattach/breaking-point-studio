@@ -179,3 +179,6 @@ details summary { cursor: pointer; color: var(--cyan); font-weight: 600; margin:
 /* ---------- failed-claims warning on the script review ---------- */
 .warn-box { margin: 8px 0 12px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--orange); background: rgba(255, 107, 44, .12); color: #ffd2bf; font-size: 14px; }
 .warn-box b { color: var(--orange); }
+
+.twist-why { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+.twist-why b.orange { color: var(--orange); }

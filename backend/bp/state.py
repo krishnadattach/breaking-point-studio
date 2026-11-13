@@ -19,18 +19,29 @@ class Level(BaseModel):
 
 
 class Script(BaseModel):
-    hook: str = Field(description="Opening line, max ~20 words, makes people stay")
+    hook: str = Field(description="Opening line, max ~20 words, makes people stay. Any factual statement in it must be "
+                                  "true and supported by a research source; a pure question is safest.")
+    hook_source_url: str = Field(default="", description="URL from the research sources that supports any factual "
+                                 "statement in the hook. Empty ONLY if the hook states no facts (just a question/teaser).")
     shape: Literal["sphere", "cube", "cone"] = Field(description="Simple 3D stand-in for the object")
     hazard: str = Field(description="heat, cold, pressure, impact speed, lightning or spin")
-    twist_level: int = Field(description="The one surprising level (1-10): result opposite to expectation")
+    twist_expectation: str = Field(default="", description="What most viewers would EXPECT to happen at the twist level "
+                                   "(e.g. 'a fragile grain of sand shatters')")
+    twist_explanation: str = Field(default="", description="What really happens at the twist level and why it is "
+                                   "surprising, based on the research (one or two sentences)")
+    twist_level: int = Field(description="The one twist level (3-9): the object SURVIVES where viewers expect it to fail")
     levels: list[Level] = Field(description="Exactly 10 levels")
 
 
 # ---- fact-check result for one claim ----
+# FIELD ORDER MATTERS: the model writes the fields in this order, so it must write its reasoning BEFORE it commits to
+# the verdict. (Before, the verdict came first and the explanation sometimes contradicted it.)
 class ClaimCheck(BaseModel):
-    level: int
-    supported: bool
-    reason: str
+    level: int = Field(description="The item number (0 = the hook)")
+    reason: str = Field(description="Reasoning FIRST: compare the claim with the source text, then end with your "
+                                    "conclusion in plain words")
+    supported: bool = Field(description="The final verdict, decided only after the reasoning above. It MUST agree "
+                                        "with the conclusion you just wrote.")
 
 
 class ClaimChecks(BaseModel):

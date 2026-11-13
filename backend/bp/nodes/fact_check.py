@@ -1,5 +1,6 @@
 """NODE 3 - fact_check: every claim must link to a source.
 
+Claims checked: the 10 level claims AND the hook (stored as level 0), so a false opening line is caught too.
 Two checks per claim:
  1. (free, plain Python) the claim's URL must be one of the research sources
     and the script must have exactly 10 levels.
@@ -11,12 +12,23 @@ from .. import config, db, llm
 from ..state import ClaimChecks, State
 
 
+FACT_CHECK_SYSTEM = """You are a strict fact checker. For each ITEM say whether the SOURCE TEXT supports the CLAIM
+(numbers and meaning). Be strict but fair; unsupported or contradicted = not supported.
+For every item, write your reasoning FIRST, and only then give the verdict. Your verdict must agree with the conclusion
+of your reasoning (if you conclude 'the source supports the claim', the verdict is supported = true).
+ITEM 0 is the episode's opening HOOK: check every factual statement in it against the source text (and against basic
+common knowledge: an overclaim such as 'the smallest rock on Earth' is NOT supported). If the hook is only a question or
+a teaser with no factual statement, it is supported."""
+
+
 def fact_check(state: State) -> dict:
     script = state["script"]
     sources = {s["url"]: s for s in state.get("sources", [])}
     levels = script["levels"]
-    claims = [{"level": lv["n"], "claim": lv["claim"], "source_url": lv["source_url"],
-               "status": "pass", "reason": ""} for lv in levels]
+    hook_url = script.get("hook_source_url", "")
+    claims = [{"level": 0, "claim": script["hook"], "source_url": hook_url, "status": "pass", "reason": ""}]
+    claims += [{"level": lv["n"], "claim": lv["claim"], "source_url": lv["source_url"],
+                "status": "pass", "reason": ""} for lv in levels]
 
     problems = []
     if len(levels) != 10:
@@ -24,6 +36,8 @@ def fact_check(state: State) -> dict:
 
     # check 1: source link exists
     for c in claims:
+        if c["level"] == 0 and not c["source_url"]:
+            continue    # a hook with no source is allowed ONLY if it states no facts; the AI check below decides
         if c["source_url"] not in sources:
             c["status"], c["reason"] = "fail", "source_url is not one of the researched sources"
 
@@ -32,12 +46,11 @@ def fact_check(state: State) -> dict:
         to_check = [c for c in claims if c["status"] == "pass"]
         if to_check:
             block = "\n\n".join(
-                f"LEVEL {c['level']}\nCLAIM: {c['claim']}\nSOURCE TEXT: {sources[c['source_url']]['snippet']}"
+                (f"ITEM {c['level']}" + (" (THE HOOK)" if c["level"] == 0 else "") + f"\nCLAIM: {c['claim']}\n"
+                 f"SOURCE TEXT: {sources[c['source_url']]['snippet'] if c['source_url'] in sources else '(no source given)'}")
                 for c in to_check)
             result: ClaimChecks = llm.cheap().with_structured_output(ClaimChecks).invoke([
-                ("system", "You are a strict fact checker. For each level say whether the SOURCE TEXT supports the CLAIM "
-                           "(numbers and meaning). Be strict but fair; unsupported or contradicted = supported false."),
-                ("human", block)])
+                ("system", FACT_CHECK_SYSTEM), ("human", block)])
             by_level = {r.level: r for r in result.checks}
             for c in to_check:
                 r = by_level.get(c["level"])
@@ -45,7 +58,8 @@ def fact_check(state: State) -> dict:
                     c["status"], c["reason"] = "fail", (r.reason if r else "not checked")
 
     failed = [c for c in claims if c["status"] == "fail"]
-    problems += [f"Level {c['level']}: {c['reason']} (claim: {c['claim']})" for c in failed]
+    problems += [f"{'The HOOK' if c['level'] == 0 else 'Level ' + str(c['level'])}: {c['reason']} (claim: {c['claim']})"
+                 for c in failed]
 
     db.save_script_with_claims(state["episode_id"], script, claims)   # one script version per pass
 

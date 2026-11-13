@@ -76,8 +76,8 @@ call, with what input, and when it is finished), in a loop. A *workflow* is a fi
 | Step | What it is today |
 |---|---|
 | `research` | **A real agent.** Claude (the cheap model) gets the `web_search` tool (Tavily) and a goal: find real measured values across the hazard's full range, harmless to destructive, plus one surprising fact for the twist. It chooses its own queries, reads the results, searches again to fill gaps, and decides when it has enough. Hard limit: 5 searches, enforced in the tool itself. Every query it chose is saved in MySQL (`research_queries`) and shown on the episode page. |
-| `write_script` | One Claude call that fills in a structured form (no tools). Its output is validated by code; if invalid it is retried once with the validation error. |
-| `fact_check` | One Claude (Haiku) call that judges each claim against its source text (no tools). |
+| `write_script` | One Claude call that fills in a structured form (no tools). Its output is validated by code (including the twist rule); if invalid it is retried once with the validation error. |
+| `fact_check` | One Claude (Haiku) call that judges the hook and each level's claim against its source text (reasoning first, then the verdict; no tools). |
 | `review_script`, `review_video` | A human decides (LangGraph interrupt). |
 | `voiceover`, `render`, `assemble` | Plain code driving Windows TTS, Blender and FFmpeg. |
 

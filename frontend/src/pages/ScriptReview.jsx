@@ -24,8 +24,13 @@ export default function ScriptReview({ ep, onChanged }) {
   const [confirming, setConfirming] = useState(false); // second click needed when claims failed
 
   const claimByLevel = Object.fromEntries((script.claims || []).map((c) => [c.level, c]));
-  // Levels whose claim did not pass fact-check (or was never checked): approving these needs a confirmation.
-  const failedLevels = script.levels.filter((lv) => claimByLevel[lv.n]?.status !== "pass").map((lv) => lv.n);
+  // Claims that did not pass fact-check (or were never checked): approving with these needs a confirmation.
+  // Claim 0 is the hook; older scripts have no hook claim, so it is only counted when it exists.
+  const hookClaim = claimByLevel[0];
+  const failedLevels = [
+    ...(hookClaim && hookClaim.status !== "pass" ? ["the hook"] : []),
+    ...script.levels.filter((lv) => claimByLevel[lv.n]?.status !== "pass").map((lv) => `level ${lv.n}`),
+  ];
   const scriptNotes = ep.approvals.filter((a) => a.kind === "script");
 
   async function act(fn) {
@@ -60,6 +65,21 @@ export default function ScriptReview({ ep, onChanged }) {
           </span>
         </div>
         <p className="hook">&ldquo;{script.hook}&rdquo;</p>
+        {hookClaim && (
+          <div className="claim">
+            <span className={`check ${hookClaim.status === "pass" ? "ok" : "no"}`}>
+              {hookClaim.status === "pass" ? "Hook checked" : "Hook failed"}
+            </span>
+            {hookClaim.source_url ? <Source url={hookClaim.source_url} /> : <span className="muted">no facts claimed</span>}
+          </div>
+        )}
+        {hookClaim?.status !== "pass" && hookClaim?.reason && <p className="reason">{hookClaim.reason}</p>}
+        {script.twist_expectation && (
+          <p className="twist-why">
+            <b className="orange">Twist, level {script.twist_level}:</b> viewers expect: {script.twist_expectation}.{" "}
+            {script.twist_explanation}
+          </p>
+        )}
       </section>
 
       <section className="levels">
@@ -110,8 +130,8 @@ export default function ScriptReview({ ep, onChanged }) {
           {failedLevels.length > 0 && (
             <div className="warn-box">
               <b>
-                Warning: {failedLevels.length} claim{failedLevels.length === 1 ? "" : "s"} failed fact-check (level
-                {failedLevels.length === 1 ? "" : "s"} {failedLevels.join(", ")}).
+                Warning: {failedLevels.length} claim{failedLevels.length === 1 ? "" : "s"} failed fact-check (
+                {failedLevels.join(", ")}).
               </b>{" "}
               These numbers may not be supported by their sources. Check the orange reasons above, or send notes so the
               writer fixes them.

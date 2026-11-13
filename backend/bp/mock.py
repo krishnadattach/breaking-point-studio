@@ -43,12 +43,12 @@ def research_notes(topic: str) -> str:
 def script(topic: str) -> dict:
     obj, hazard = parse_topic(topic)
     unit, values = HAZARDS[hazard]
-    twist = 7
+    twist = 5
     levels = []
     for i, v in enumerate(values, start=1):
-        # mock rule: survives levels 1-4, destroyed at 5-6, then level 7 is the twist (a surprising SURVIVES),
-        # destroyed again from level 8. This satisfies write_script's own validation rules.
-        verdict = "SURVIVES" if i <= 4 or i == twist else "DESTROYED"
+        # mock rule: levels 1-5 survive (level 5 is the twist: a surprising SURVIVES), levels 6-10 are destroyed.
+        # No fake DESTROYED is needed before the twist. This satisfies write_script's own validation rules.
+        verdict = "SURVIVES" if i <= twist else "DESTROYED"
         levels.append({
             "n": i,
             "narration": (f"Level {i}: {v} {unit}. " + ("Surprise! " if i == twist else "")
@@ -60,6 +60,9 @@ def script(topic: str) -> dict:
         })
     return {
         "hook": f"Can {obj.lower()} survive 10 levels of {hazard}? Watch until level {twist}.",
+        "hook_source_url": "",      # a question: states no facts, so nothing to check
+        "twist_expectation": f"MOCK: most people expect {obj.lower()} to fail by level {twist}",
+        "twist_explanation": f"MOCK: at level {twist} it survives anyway, which is the surprise of this episode.",
         "shape": "sphere",
         "hazard": hazard,
         "twist_level": twist,

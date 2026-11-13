@@ -25,13 +25,20 @@ RULES
   band or take them all from one threshold table. Check yourself: if levels 1-5 look almost the same, redo them.
 - Each level has one SURVIVES or DESTROYED verdict. The object fails somewhere sensible. Every level tests a fresh,
   identical object, so a later level may survive even though an earlier one was destroyed.
-- THE TWIST: exactly ONE level (between 3 and 9) is a REAL surprise: the result is the opposite of what viewers
-  expect, so its verdict differs from the level just before it. Best: the object SURVIVES at a level where everyone
-  expects it to fail (use the surprising fact from the research, e.g. a real physical effect). Just being DESTROYED
-  at a higher number is NOT a twist, and the last level cannot be the twist. The narration for the twist level must
-  say why it is surprising.
+- THE TWIST: exactly ONE level (between 3 and 9) where the object SURVIVES although most viewers would expect it to
+  fail (use the surprising fact from the research). Fill in twist_expectation (what viewers expect there) and
+  twist_explanation (what really happens and why, from the research). The twist level's narration and claim must carry
+  that surprising fact. A DESTROYED level is NEVER the twist: the first DESTROYED level is just the object's breaking
+  point. Do NOT invent a fake DESTROYED level earlier to set the twist up: verdicts must follow the real data (usually
+  SURVIVES up to the real breaking point). If the research has no dramatic surprise, use the most surprising TRUE
+  survival you can source, never an invented one.
 - Each narration line is short (max 25 words), spoken, and ends by naming the verdict.
-- Every level's claim must be supported by one of the provided source URLs. Use ONLY those URLs. Do not invent facts."""
+- Every level's claim must be supported by one of the provided source URLs. Use ONLY those URLs. Do not invent facts.
+- A claim restates ONLY what its source says (numbers and meaning). Do not add descriptions or comparisons the source does
+  not contain: a fact-checker compares each claim with the source text and fails extras.
+- THE HOOK is fact-checked too. Prefer a question or teaser with no factual statement (leave hook_source_url empty). If
+  the hook states a fact, it must be true, free of exaggeration ("the tiniest", "the hardest", "the only" are almost
+  always false) and supported by a source: put that URL in hook_source_url."""
 
 
 def validate_script(script: Script) -> list[str]:
@@ -41,6 +48,28 @@ def validate_script(script: Script) -> list[str]:
     if len(lv) != 10:
         problems.append(f"There must be exactly 10 levels, but there are {len(lv)}.")
         return problems
+    if [x.n for x in lv] != list(range(1, 11)):
+        problems.append(f"Levels must be numbered 1 to 10 in order, but the numbers are {[x.n for x in lv]}.")
+    if len({x.value.strip().lower() for x in lv}) != 10:
+        problems.append("Every level needs a different value; some values are repeated.")
+    if lv[0].verdict != "SURVIVES":
+        problems.append("Level 1 must be harmless: its verdict must be SURVIVES.")
+    if not any(x.verdict == "DESTROYED" for x in lv):
+        problems.append("The object must fail somewhere: at least one level must be DESTROYED.")
+    for x in lv:
+        if len(x.narration.split()) > 30:
+            problems.append(f"Level {x.n} narration is too long ({len(x.narration.split())} words; max 25).")
+    t = script.twist_level
+    if not 3 <= t <= 9:
+        problems.append(f"twist_level must be between 3 and 9, but it is {t}.")
+    elif lv[t - 1].verdict != "SURVIVES":
+        problems.append(f"The twist (level {t}) must be a level where the object SURVIVES although viewers expect it to "
+                        f"fail. A DESTROYED level is just the breaking point, not a twist.")
+    if len(script.twist_expectation.split()) < 3:
+        problems.append("twist_expectation is missing: say what viewers would expect to happen at the twist level.")
+    if len(script.twist_explanation.split()) < 5:
+        problems.append("twist_explanation is missing: say what really happens at the twist level and why it is surprising.")
+    return problems
     if [x.n for x in lv] != list(range(1, 11)):
         problems.append(f"Levels must be numbered 1 to 10 in order, but the numbers are {[x.n for x in lv]}.")
     if len({x.value.strip().lower() for x in lv}) != 10:
