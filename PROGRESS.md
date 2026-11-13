@@ -5,11 +5,11 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
 | Stage | Status |
 |---|---|
 | 1 - Setup | DONE |
-| 2 - LangGraph workflow | DONE (mock-tested) |
+| 2 - LangGraph workflow | DONE (one real run completed) |
 | 3 - MySQL tables | DONE (mock-tested) |
 | 4 - FastAPI | DONE (mock-tested) |
 | 5 - React dashboard | DONE (builds; owner to click through) |
-| 6 - Finish (start.bat, README, GitHub) | IN PROGRESS |
+| 6 - Finish (start.bat, README, GitHub) | DONE except the GitHub push (waiting for `gh auth login`) |
 
 ## Stage 1 - Setup (DONE)
 - git repo, .gitignore (ignores .env, .venv, output/, mysql-data/), .env / .env.example, .venv
@@ -73,16 +73,29 @@ The full build plan and rules are in [PLAN.md](PLAN.md). Last updated: 2026-11-1
   matches what the pages read. Not yet clicked through in a browser by the owner.
 - Start: backend as in Stage 4, then `cd frontend; npm run dev` -> http://localhost:5173
 
-## Stage 6 - Finish (IN PROGRESS)
-Done so far:
-- Dashboard fix: Stage column shows "Done" (was lowercase `done`); stages.js `stageLabel`.
-- Git identity set for this repo to Krishna Datta + GitHub noreply email; all 4 old commits rewritten, old refs/reflog
-  purged (no trace of the old email). History scanned: the real API keys / DB password appear in no commit.
-- start.bat written (MySQL + backend + dashboard + browser; `start.bat mock` = free mode). Not yet run: the
-  Stage 4-5 test servers are still running on ports 8000/5173/3307 and must be stopped first.
+## Stage 6 - Finish (DONE except the push)
+- Dashboard fix: Stage column shows "Done" (`stageLabel` in frontend/src/stages.js).
+- start.bat (MySQL + backend + dashboard + browser) and start_mock.bat (same, free mock mode). From a terminal use
+  `.\start.bat` (plain `start.bat` is read by cmd as its built-in `start`).
+- Personal paths removed: scripts/my8.ini is generic (start_mysql.bat passes basedir/datadir); the path comment in
+  grid_kit.py is generic; both scrubbed from old commits too.
+- Git identity for this repo: Krishna Datta + GitHub noreply email. All commits rewritten, old refs/reflog purged.
+  History scanned: no API key, DB password, old email or personal path in any commit. `.env` was never tracked.
+- Mock data deleted (3 episodes, orphan checkpoints, output folders) before the real run.
+- FIRST REAL RUN (Claude + Tavily) of "A grain of sand vs 10 levels of speed": completed end to end (episode
+  ep-eac294e0, script approved, 25 MB final.mp4, video approved). Bug found by the real run and fixed: Sonnet 5.5
+  "thinks" and used up max_tokens=4000, truncating the structured script (missing `levels`). Now writer 16000 /
+  cheap 8000 (a ceiling only; billed per token used).
+- README.md written (what it does, Mermaid architecture diagram, setup, how to run, roadmap).
+- gh CLI installed; owner signs in with `gh auth login`.
 
-Next:
-1. OWNER APPROVAL for the first real (paid) run, then delete the 3 old mock episodes (DB rows + checkpoints + output/ folders).
-2. Test start.bat, run "A grain of sand vs 10 levels of speed" for real, end to end.
-3. README (what it does, Mermaid diagram, how to run, roadmap).
-4. Commit; create the PUBLIC GitHub repo (gh CLI not installed yet) and push.
+## Known quality issues (for the roadmap)
+- Script quality on the real run: levels 1-6 were all tiny wind speeds from one threshold table; the "twist" (level 10,
+  99.9% of light speed) was also DESTROYED so it was not a real twist; 3 claims still failed fact-check after the
+  2-loop maximum (the owner approved anyway). Prompt/evals work: demand a real spread of values and a real twist.
+- Skeleton visuals/voice as listed above.
+
+## Next
+1. Owner: `gh auth login`. Then create the PUBLIC repo (`gh repo create ... --public --source . --push`).
+2. After the push: re-run the secret scan on what was pushed; then roadmap items (better voice, visuals, visual QA,
+   evals, analytics).
